@@ -1,3 +1,4 @@
+from psonic import *
 import json
 import random
 import serial

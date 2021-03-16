@@ -154,155 +154,149 @@ void loop() {
       }
     }
 
-    if (!time_beingSet) {
-      if (apiValue == LOW && api_isPressed && api_beingSet) {
-        int which_day = (potenValue / 585) + 1;
-        Udp.beginPacket(CONSOLE_IP, CONSOLE_PORT);
-        Udp.print(which_day);
-        Udp.endPacket();
-        
-        api_beingSet = false;
-        api_isPressed = !api_isPressed;
-        delay(10);
-      } else if (apiValue == LOW && api_isPressed && !api_beingSet) {
-        Serial.println("API is turned on/Ready to change value");
-        if (api_status == false) {
-          api_status = true;
+    if (lamp_working) {
+      if (!time_beingSet) {
+        if (apiValue == LOW && api_isPressed && api_beingSet) {
+          int which_day = (potenValue / 585) + 1;
           Udp.beginPacket(CONSOLE_IP, CONSOLE_PORT);
-          Udp.print("API");
+          Udp.print(which_day);
           Udp.endPacket();
+          
+          api_beingSet = false;
+          api_isPressed = !api_isPressed;
+          delay(10);
+        } else if (apiValue == LOW && api_isPressed && !api_beingSet) {
+          Serial.println("API is turned on/Ready to change value");
+          if (api_status == false) {
+            api_status = true;
+            Udp.beginPacket(CONSOLE_IP, CONSOLE_PORT);
+            Udp.print("API");
+            Udp.endPacket();
+          }
+          
+          api_beingSet = true;
+          api_isPressed = !api_isPressed;
+          delay(10);
+        } else if (apiValue == HIGH && !api_isPressed) {
+          api_isPressed = !api_isPressed;
+          delay(10);
+        }
+      }
+    
+      if (api_status && !api_beingSet) {
+        if (alarmValue == LOW && alarm_isPressed) {
+          Serial.println("API is turned off");
+          Udp.beginPacket(CONSOLE_IP, CONSOLE_PORT);
+          Udp.print("CANCEL");
+          Udp.endPacket();
+          
+          api_status = false;
+          alarm_isPressed = !alarm_isPressed;
+          delay(10);
+        } else if (alarmValue == HIGH && !alarm_isPressed) {
+          alarm_isPressed = !alarm_isPressed;
+          delay(10);
+        }
+      } else if (!api_status && !api_beingSet) {
+        if (alarmValue == LOW && alarm_isPressed && !time_beingSet) {      
+          Serial.println("Time is being set");
+          Udp.beginPacket(CONSOLE_IP, CONSOLE_PORT);
+          Udp.print("TIME");
+          Udp.endPacket();
+          
+          time_beingSet = true;
+          alarm_isPressed = !alarm_isPressed;
+          delay(10);
+        } else if (alarmValue == LOW && alarm_isPressed && time_beingSet && !hour_isSet && !min_isSet && !sec_isSet) {
+          hour_timer = current_hour;
+          Serial.println("Hour is set");
+          Udp.beginPacket(CONSOLE_IP, CONSOLE_PORT);
+          Udp.print("MIN");
+          Udp.endPacket();
+    
+          hour_isSet = true;
+          alarm_isPressed = !alarm_isPressed;
+          delay(10);
+        } else if (alarmValue == LOW && alarm_isPressed && time_beingSet && hour_isSet && !min_isSet && !sec_isSet) {
+          min_timer = current_min;
+          Serial.println("Minute is set");
+          Udp.beginPacket(CONSOLE_IP, CONSOLE_PORT);
+          Udp.print("SEC");
+          Udp.endPacket();
+    
+          min_isSet = true;
+          alarm_isPressed = !alarm_isPressed;
+          delay(10);
+        } else if (alarmValue == LOW && alarm_isPressed && time_beingSet && hour_isSet && min_isSet && !sec_isSet) {
+          sec_timer = current_sec;
+          Serial.println("Second is set");
+          Udp.beginPacket(CONSOLE_IP, CONSOLE_PORT);
+          Udp.print("CONFIRM");
+          Udp.endPacket();
+    
+          sec_isSet = true;
+          alarm_isPressed = !alarm_isPressed;
+          delay(10);
+        } else if (alarmValue == HIGH && !alarm_isPressed) {
+          alarm_isPressed = !alarm_isPressed;
+          delay(10);
+        }
+      }
+    
+      if (hour_isSet & min_isSet && sec_isSet) {
+        hour_isSet = false;
+        min_isSet = false;
+        sec_isSet = false;
+        time_beingSet = false;
+        
+        t = now();
+        alarm_isOn = true;
+        Serial.println("Alarm is on");
+      }
+    
+      if (alarm_isOn) {
+        int program_sec = (hour() * 360) + (minute() * 60) + second();
+        int remove_sec = (hour(t) * 360) + (minute(t) * 60) + second(t);
+        int remaining_sec = program_sec - remove_sec;
+        
+        int real_hr =  remaining_sec / 360;
+        if (real_hr > 0) {
+          remaining_sec %= 360;
+        }
+        int real_min = remaining_sec / 60;
+        if (real_min > 0) {
+          remaining_sec %= 60;
+        }
+        int real_sec = remaining_sec;
+        
+        String current_time = "";
+        if (real_hr < 10) {
+          current_time += "0";
+          current_time += String(real_hr);
+        } else {
+          current_time += String(real_hr);
+        }
+        current_time += ":";
+        if (real_min < 10) {
+          current_time += "0";
+          current_time += String(real_min);
+        } else {
+          current_time += String(real_min);
+        }
+        current_time += ":";
+        if (real_sec < 10) {
+          current_time += "0";
+          current_time += String(real_sec);
+        } else {
+          current_time += String(real_sec);
         }
         
-        api_beingSet = true;
-        api_isPressed = !api_isPressed;
-        delay(10);
-      } else if (apiValue == HIGH && !api_isPressed) {
-        api_isPressed = !api_isPressed;
-        delay(10);
-      }
-    }
-  
-    if (api_status && !api_beingSet) {
-      if (alarmValue == LOW && alarm_isPressed) {
-        Serial.println("API is turned off");
         Udp.beginPacket(CONSOLE_IP, CONSOLE_PORT);
-        Udp.print("CANCEL");
+        Udp.print(current_time);
         Udp.endPacket();
-        
-        api_status = false;
-        alarm_isPressed = !alarm_isPressed;
         delay(10);
-      } else if (alarmValue == HIGH && !alarm_isPressed) {
-        alarm_isPressed = !alarm_isPressed;
-        delay(10);
-      }
-    } else if (!api_status && !api_beingSet) {
-      if (alarmValue == LOW && alarm_isPressed && !time_beingSet) {      
-        Serial.println("Time is being set");
-        Udp.beginPacket(CONSOLE_IP, CONSOLE_PORT);
-        Udp.print("TIME");
-        Udp.endPacket();
-        
-        time_beingSet = true;
-        alarm_isPressed = !alarm_isPressed;
-        delay(10);
-      } else if (alarmValue == LOW && alarm_isPressed && time_beingSet && !hour_isSet && !min_isSet && !sec_isSet) {
-        hour_timer = current_hour;
-        Serial.println("Hour is set");
-        Udp.beginPacket(CONSOLE_IP, CONSOLE_PORT);
-        Udp.print("MIN");
-        Udp.endPacket();
-  
-        hour_isSet = true;
-        alarm_isPressed = !alarm_isPressed;
-        delay(10);
-      } else if (alarmValue == LOW && alarm_isPressed && time_beingSet && hour_isSet && !min_isSet && !sec_isSet) {
-        min_timer = current_min;
-        Serial.println("Minute is set");
-        Udp.beginPacket(CONSOLE_IP, CONSOLE_PORT);
-        Udp.print("SEC");
-        Udp.endPacket();
-  
-        min_isSet = true;
-        alarm_isPressed = !alarm_isPressed;
-        delay(10);
-      } else if (alarmValue == LOW && alarm_isPressed && time_beingSet && hour_isSet && min_isSet && !sec_isSet) {
-        sec_timer = current_sec;
-        Serial.println("Second is set");
-        Udp.beginPacket(CONSOLE_IP, CONSOLE_PORT);
-        Udp.print("CONFIRM");
-        Udp.endPacket();
-  
-        sec_isSet = true;
-        alarm_isPressed = !alarm_isPressed;
-        delay(10);
-      } else if (alarmValue == HIGH && !alarm_isPressed) {
-        alarm_isPressed = !alarm_isPressed;
-        delay(10);
-      }
-    }
-  
-    if (hour_isSet & min_isSet && sec_isSet) {
-      hour_isSet = false;
-      min_isSet = false;
-      sec_isSet = false;
-      time_beingSet = false;
-      
-      t = now();
-      alarm_isOn = true;
-      Serial.println("Alarm is on");
-    }
-  
-    if (alarm_isOn) {
-      int program_sec = (hour() * 360) + (minute() * 60) + second();
-      int remove_sec = (hour(t) * 360) + (minute(t) * 60) + second(t);
-      int remaining_sec = program_sec - remove_sec;
-      
-      int real_hr =  remaining_sec / 360;
-      if (real_hr > 0) {
-        remaining_sec %= 360;
-      }
-      int real_min = remaining_sec / 60;
-      if (real_min > 0) {
-        remaining_sec %= 60;
-      }
-      int real_sec = remaining_sec;
-      
-      String current_time = "";
-      if (real_hr < 10) {
-        current_time += "0";
-        current_time += String(real_hr);
-      } else {
-        current_time += String(real_hr);
-      }
-      current_time += ":";
-      if (real_min < 10) {
-        current_time += "0";
-        current_time += String(real_min);
-      } else {
-        current_time += String(real_min);
-      }
-      current_time += ":";
-      if (real_sec < 10) {
-        current_time += "0";
-        current_time += String(real_sec);
-      } else {
-        current_time += String(real_sec);
       }
       
-      Udp.beginPacket(CONSOLE_IP, CONSOLE_PORT);
-      Udp.print(current_time);
-      Udp.endPacket();
-      delay(10);
-
-      if (hour_timer == real_hr && min_timer == real_min && sec_timer == real_sec) {
-        lamp_working = false;
-        clear_leds();
-      }
-    }
-
-    if (lamp_working) {
-    
       if (time_beingSet) {
         if (!hour_isSet && !min_isSet && !sec_isSet) {
           current_hour = potenValue /178;
@@ -333,7 +327,7 @@ void loop() {
           }
         }
       }
-
+  
       if (api_status) {
         if (photoValue < 2000) {
           clear_leds();
