@@ -1,4 +1,4 @@
-#Wired Lamp
+# Wired Lamp
 
 Through this module, I created a wired lamp that reacts to a photoresister and some interactions via buttons and potentiometer. The feautures that this lamp includes are changes color based on current temperature and provides a timer when the lamp will turn automatically off which then the Raspberry Pi will produce a sound through Sonic Pi.
 
